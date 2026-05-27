@@ -40,6 +40,11 @@ const userSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    tokenVersion: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
   },
   {
     timestamps: true,

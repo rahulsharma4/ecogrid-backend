@@ -21,7 +21,7 @@ const authUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        token: generateToken(user._id),
+        token: generateToken(user._id, user.tokenVersion || 0),
       });
     } else {
       res.status(401).json({ message: 'Invalid email or password' });
@@ -155,4 +155,57 @@ const toggleStaffStatus = async (req, res) => {
   }
 };
 
-module.exports = { authUser, registerUser, getStaff, deleteStaff, getStaffDetails, toggleStaffStatus };
+// @desc    Update staff details (Admin only)
+// @route   PUT /api/staff/:id
+// @access  Private/Admin
+const updateStaff = async (req, res) => {
+  try {
+    const { name, email, phone, role, password } = req.body;
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'Staff member not found' });
+    }
+
+    // Verify ownership
+    if (user.owner && user.owner.toString() !== req.user._id.toString()) {
+      return res.status(401).json({ message: 'Not authorized to manage this staff member' });
+    }
+
+    // Check if email already exists for another user
+    if (email && email !== user.email) {
+      const emailExists = await User.findOne({ email });
+      if (emailExists) {
+        return res.status(400).json({ message: 'A user with this email already exists' });
+      }
+      user.email = email;
+    }
+
+    if (name) user.name = name;
+    if (phone) user.phone = phone;
+    if (role) user.role = role;
+
+    if (password && password.trim() !== '') {
+      user.password = password;
+      user.tokenVersion = (user.tokenVersion || 0) + 1;
+    }
+
+    await user.save();
+
+    res.json({
+      message: 'Staff member updated successfully',
+      staff: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        status: user.status
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { authUser, registerUser, getStaff, deleteStaff, getStaffDetails, toggleStaffStatus, updateStaff };

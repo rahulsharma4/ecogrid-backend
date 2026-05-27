@@ -19,6 +19,12 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ message: 'Not authorized, user account is inactive or deleted' });
       }
 
+      const userTokenVersion = req.user.tokenVersion || 0;
+      const decodedTokenVersion = decoded.tokenVersion || 0;
+      if (decodedTokenVersion !== userTokenVersion) {
+        return res.status(401).json({ message: 'Not authorized, session expired (password changed)' });
+      }
+
       next();
     } catch (error) {
       console.error(error);

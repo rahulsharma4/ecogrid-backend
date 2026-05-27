@@ -11,18 +11,22 @@ const createInvoice = async (req, res) => {
       baseAmount, gstPercentage, amountPaid, bankDetails, isGstInclusive
     } = req.body;
 
-    // Generate Invoice Number (e.g. INV-2026-0001)
+    // Generate Invoice Number (e.g. EG-2026-515)
     const year = new Date().getFullYear();
     const lastInvoice = await Invoice.findOne({
-        invoiceNo: new RegExp(`^INV-${year}-`)
+        invoiceNo: new RegExp(`^(INV|EG)-${year}-`)
     }).sort({ invoiceNo: -1 });
 
-    let nextNumber = 1;
+    let nextNumber = 515;
     if (lastInvoice) {
         const lastNo = parseInt(lastInvoice.invoiceNo.split('-')[2]);
-        nextNumber = lastNo + 1;
+        if (lastInvoice.invoiceNo.startsWith('INV-')) {
+            nextNumber = lastNo + 502; // Transition from INV-2026-0014 to EG-2026-516
+        } else {
+            nextNumber = lastNo + 1;
+        }
     }
-    const invoiceNo = `INV-${year}-${nextNumber.toString().padStart(4, '0')}`;
+    const invoiceNo = `EG-${year}-${nextNumber}`;
 
     // Calculations
     const isInclusive = isGstInclusive === true || isGstInclusive === 'true';
