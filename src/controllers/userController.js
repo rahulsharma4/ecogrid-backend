@@ -7,9 +7,13 @@ const generateToken = require('../config/generateToken');
 const authUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    
+    const cleanEmail = email ? email.toString().trim().toLowerCase() : '';
+    const cleanPassword = password ? password.toString().trim() : '';
+    
+    const user = await User.findOne({ email: cleanEmail });
 
-    if (user && (await user.matchPassword(password))) {
+    if (user && (await user.matchPassword(cleanPassword))) {
       if (user.isDeleted) {
         return res.status(401).json({ message: 'Your account has been deleted. Please contact admin.' });
       }
@@ -36,11 +40,14 @@ const registerUser = async (req, res) => {
     const { name, email, phone, password, role } = req.body;
     const isAdminCreating = req.user && req.user.role === 'admin';
     
+    const cleanEmail = email ? email.toString().trim().toLowerCase() : '';
+    const cleanPassword = password ? password.toString().trim() : '';
+
     const user = new User({
       name,
-      email,
+      email: cleanEmail,
       phone,
-      password,
+      password: cleanPassword,
       role: isAdminCreating ? (role || 'staff') : 'admin',
       owner: isAdminCreating ? req.user._id : null,
     });
@@ -173,20 +180,23 @@ const updateStaff = async (req, res) => {
     }
 
     // Check if email already exists for another user
-    if (email && email !== user.email) {
-      const emailExists = await User.findOne({ email });
-      if (emailExists) {
-        return res.status(400).json({ message: 'A user with this email already exists' });
+    if (email) {
+      const cleanEmail = email.toString().trim().toLowerCase();
+      if (cleanEmail !== user.email.toLowerCase()) {
+        const emailExists = await User.findOne({ email: cleanEmail });
+        if (emailExists) {
+          return res.status(400).json({ message: 'A user with this email already exists' });
+        }
+        user.email = cleanEmail;
       }
-      user.email = email;
     }
 
     if (name) user.name = name;
     if (phone) user.phone = phone;
     if (role) user.role = role;
 
-    if (password && password.trim() !== '') {
-      user.password = password;
+    if (password && password.toString().trim() !== '') {
+      user.password = password.toString().trim();
       user.tokenVersion = (user.tokenVersion || 0) + 1;
     }
 
